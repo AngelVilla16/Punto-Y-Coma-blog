@@ -10,11 +10,7 @@ import { NewsletterForm } from '@/components/NewsletterForm'
 import { SearchForm } from '@/components/Search/SearchForm'
 import { FeaturedTutorialCard } from '@/components/TutorialCard/FeaturedTutorialCard'
 import { TutorialCard } from '@/components/TutorialCard'
-import {
-  TECH_CATALOG,
-  getTechDefinition,
-  type TutorialCardDoc,
-} from '@/utilities/tutorials'
+import { getCategoryGlyph, type TutorialCardDoc } from '@/utilities/tutorials'
 
 export const revalidate = 60
 
@@ -23,8 +19,6 @@ export const metadata: Metadata = {
   description:
     'Tutoriales de programación en español, explicados con calma. Del primer «hola, mundo» a tu próximo proyecto.',
 }
-
-const learningPath = ['HTML', 'CSS', 'JavaScript']
 
 export default async function HomePage() {
   const payload = await getPayload({ config: configPromise })
@@ -39,6 +33,7 @@ export default async function HomePage() {
       title: true,
       slug: true,
       categories: true,
+      level: true,
       meta: true,
       publishedAt: true,
     },
@@ -48,10 +43,25 @@ export default async function HomePage() {
   const featured = docs[0]
   const recent = docs.slice(1, 4)
 
-  const techCounts = new Map<string, number>()
+  const categoriesResult = await payload.find({
+    collection: 'categories',
+    depth: 0,
+    limit: 100,
+    overrideAccess: false,
+    sort: 'order',
+  })
+
+  const categories = [...categoriesResult.docs].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0) || a.title.localeCompare(b.title),
+  )
+  const learningPath = categories.slice(0, 3)
+
+  const categoryCounts = new Map<number, number>()
   for (const doc of docs) {
-    const tech = getTechDefinition(doc)
-    if (tech) techCounts.set(tech.key, (techCounts.get(tech.key) || 0) + 1)
+    for (const category of doc.categories ?? []) {
+      const id = typeof category === 'object' ? category?.id : category
+      if (typeof id === 'number') categoryCounts.set(id, (categoryCounts.get(id) || 0) + 1)
+    }
   }
 
   return (
@@ -151,36 +161,38 @@ export default async function HomePage() {
             <SearchForm className="lg:w-[566px]" variant="inline" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-            {TECH_CATALOG.map((tech) => {
-              const count = techCounts.get(tech.key) || 0
+          {categories.length > 0 && (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+              {categories.map((category) => {
+                const count = categoryCounts.get(category.id) || 0
 
-              return (
-                <Link
-                  className="group flex h-[144px] flex-col justify-between rounded-xl border border-line bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-[0_16px_32px_-24px_rgba(52,35,70,0.35)]"
-                  href={`/search?tech=${encodeURIComponent(tech.key)}`}
-                  key={tech.key}
-                >
-                  <div className="flex w-full items-center justify-between gap-2">
-                    <span className="font-mono text-[24px] font-medium leading-none tracking-[-1px] text-brand">
-                      {tech.glyph}
-                    </span>
-                    <ArrowUpRight
-                      aria-hidden
-                      className="size-[15px] text-subtle transition-colors group-hover:text-brand"
-                      strokeWidth={1.6}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-[5px]">
-                    <p className="text-[15px] font-semibold text-ink">{tech.label}</p>
-                    <p className="font-mono text-[10px] text-subtle">
-                      {count} tutorial{count === 1 ? '' : 'es'}
-                    </p>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
+                return (
+                  <Link
+                    className="group flex h-[144px] flex-col justify-between rounded-xl border border-line bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-[0_16px_32px_-24px_rgba(52,35,70,0.35)]"
+                    href={`/search?tech=${encodeURIComponent(category.slug)}`}
+                    key={category.id}
+                  >
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <span className="font-mono text-[24px] font-medium leading-none tracking-[-1px] text-brand">
+                        {getCategoryGlyph(category)}
+                      </span>
+                      <ArrowUpRight
+                        aria-hidden
+                        className="size-[15px] text-subtle transition-colors group-hover:text-brand"
+                        strokeWidth={1.6}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-[5px]">
+                      <p className="text-[15px] font-semibold text-ink">{category.title}</p>
+                      <p className="font-mono text-[10px] text-subtle">
+                        {count} tutorial{count === 1 ? '' : 'es'}
+                      </p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
 
           <div className="flex flex-col gap-6 rounded-2xl bg-white px-7 py-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex max-w-[390px] flex-col gap-[9px]">
@@ -196,12 +208,12 @@ export default async function HomePage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-[18px]">
-              {learningPath.map((step, index) => (
-                <div className="flex items-center gap-[9px]" key={step}>
+              {learningPath.map((category, index) => (
+                <div className="flex items-center gap-[9px]" key={category.id}>
                   <span className="font-mono text-[11px] text-brand">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <span className="text-[13px] font-medium text-ink">{step}</span>
+                  <span className="text-[13px] font-medium text-ink">{category.title}</span>
                   {index < learningPath.length - 1 && (
                     <span aria-hidden className="text-[12px] text-subtle">
                       →

@@ -12,18 +12,17 @@ import { SearchForm } from '@/components/Search/SearchForm'
 import { SortSelect } from '@/components/Search/SortSelect'
 import { TutorialCard } from '@/components/TutorialCard'
 import {
-  TECH_CATALOG,
   TIME_BUCKETS,
   TIME_BUCKET_LABELS,
+  TUTORIAL_LEVELS,
+  getCategorySlug,
   getCategoryTitles,
   getDescription,
   getReadingMinutes,
-  getTechKey,
   getTimeBucket,
   getTutorialLevel,
   normalizeText,
   type TutorialCardDoc,
-  type TutorialLevel,
   type TimeBucket,
 } from '@/utilities/tutorials'
 
@@ -41,7 +40,6 @@ type Args = {
   searchParams: Promise<Record<string, SearchParamValue>>
 }
 
-const LEVELS: TutorialLevel[] = ['Inicial', 'Intermedio', 'Avanzado']
 const PER_PAGE = 6
 
 const asString = (value: SearchParamValue): string => {
@@ -74,15 +72,28 @@ export default async function SearchPage({ searchParams: searchParamsPromise }: 
       title: true,
       slug: true,
       categories: true,
+      level: true,
       meta: true,
       publishedAt: true,
     },
   })
 
+  const categoriesResult = await payload.find({
+    collection: 'categories',
+    depth: 0,
+    limit: 200,
+    overrideAccess: false,
+    sort: 'order',
+  })
+
+  const categories = [...categoriesResult.docs].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0) || a.title.localeCompare(b.title),
+  )
+
   const enriched = (posts.docs as TutorialCardDoc[]).map((doc) => {
     const minutes = getReadingMinutes(doc)
     const level = getTutorialLevel(doc)
-    const tech = getTechKey(doc)
+    const tech = getCategorySlug(doc)
 
     return {
       doc,
@@ -111,16 +122,35 @@ export default async function SearchPage({ searchParams: searchParamsPromise }: 
     timeCounts.set(item.time, (timeCounts.get(item.time) || 0) + 1)
   }
 
-  const techLabels = new Map(TECH_CATALOG.map((tech) => [tech.key, tech.label]))
-  const catalogKeys = new Set(TECH_CATALOG.map((tech) => tech.key))
-  const extraTechKeys = [...techCounts.keys()].filter((key) => !catalogKeys.has(key))
+  const techLabels = new Map(categories.map((category) => [category.slug, category.title]))
+  const catalogKeys = new Set(techLabels.keys())
+  const extraTechKeys = [...techCounts.keys()].filter((key) => key && !catalogKeys.has(key))
 
-  const techOptions = [...TECH_CATALOG.map((tech) => tech.key), ...extraTechKeys].map((key) => ({
-    active: requestedTechs.includes(key),
-    count: techCounts.get(key) || 0,
-    label: techLabels.get(key) || key,
-    value: key,
-  }))
+  const categoryKeyByAlias = new Map<string, string>()
+  for (const category of categories) {
+    categoryKeyByAlias.set(normalizeText(category.slug), category.slug)
+    categoryKeyByAlias.set(normalizeText(category.title), category.slug)
+  }
+
+  const techs = requestedTechs
+    .map((tech) => categoryKeyByAlias.get(normalizeText(tech)) || tech)
+    .filter((tech) => techLabels.has(tech) || techCounts.has(tech))
+  const activeTechs = new Set(techs)
+
+  const techOptions = [
+    ...categories.map((category) => ({
+      active: activeTechs.has(category.slug),
+      count: techCounts.get(category.slug) || 0,
+      label: category.title,
+      value: category.slug,
+    })),
+    ...extraTechKeys.map((key) => ({
+      active: activeTechs.has(key),
+      count: techCounts.get(key) || 0,
+      label: key,
+      value: key,
+    })),
+  ]
 
   const levelOptions = [
     {
@@ -128,7 +158,7 @@ export default async function SearchPage({ searchParams: searchParamsPromise }: 
       label: 'Todos los niveles',
       value: '',
     },
-    ...LEVELS.map((level) => ({
+    ...TUTORIAL_LEVELS.map((level) => ({
       active: requestedLevel === level,
       count: levelCounts.get(level) || 0,
       label: level,
@@ -143,11 +173,8 @@ export default async function SearchPage({ searchParams: searchParamsPromise }: 
     value: bucket.value,
   }))
 
-  const level = LEVELS.find((item) => item === requestedLevel) || ''
+  const level = TUTORIAL_LEVELS.find((item) => item === requestedLevel) || ''
   const time = TIME_BUCKETS.find((item) => item.value === requestedTime)?.value || ''
-  const techs = extraTechKeys.length
-    ? requestedTechs.filter((tech) => techLabels.has(tech) || techCounts.has(tech))
-    : requestedTechs.filter((tech) => techLabels.has(tech))
 
   let results = queryFiltered.filter(
     (item) =>
@@ -203,12 +230,13 @@ export default async function SearchPage({ searchParams: searchParamsPromise }: 
 
   const tutorialCount = `${total} tutorial${total === 1 ? '' : 'es'}`
 
+  const techNames = techs.map((tech) => techLabels.get(tech) || tech)
   const heading = q
     ? `${tutorialCount} sobre “${q}”`
     : techs.length === 1
-      ? `${tutorialCount} sobre ${techs[0]}`
+      ? `${tutorialCount} sobre ${techNames[0]}`
       : techs.length > 1
-        ? `${tutorialCount} de ${techs.join(' + ')}`
+        ? `${tutorialCount} de ${techNames.join(' + ')}`
         : `${tutorialCount} para aprender haciendo`
 
   return (
