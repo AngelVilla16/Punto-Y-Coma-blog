@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#faf9f6" />
+  <circle cx="1080" cy="88" r="260" fill="#f5f1fc" />
+  <circle cx="118" cy="592" r="210" fill="#efeafb" />
+
+  <g transform="translate(90 78)">
+    <rect width="52" height="52" rx="12" fill="#7147d9" />
+    <circle cx="26" cy="18" r="4.5" fill="#ffffff" />
+    <path d="M30.5 26c0 7-3.2 11.8-9.2 14.7l-2.6-4c3.6-1.7 5.7-4.1 6.2-7.1-1.9 1-4 1.4-5.8.7-3.5-1.1-5.5-3.9-5.5-7.4 0-4.7 3.6-8.1 8.7-8.1 5.2 0 8.2 4.1 8.2 11.2Z" fill="#ffffff" />
+    <text x="70" y="36" font-family="Segoe UI, Arial, sans-serif" font-size="30" fill="#252330">punto y coma</text>
+  </g>
+
+  <text x="90" y="288" font-family="Segoe UI, Arial, sans-serif" font-size="72" font-weight="400" letter-spacing="-2.4" fill="#252330">Aprende algo nuevo.</text>
+  <text x="90" y="368" font-family="Segoe UI, Arial, sans-serif" font-size="72" font-weight="400" letter-spacing="-2.4" fill="#252330">Construye algo <tspan fill="#7147d9">tuyo.</tspan></text>
+
+  <text x="90" y="452" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#76727f">Tutoriales de programación en español, explicados con calma.</text>
+  <text x="90" y="530" font-family="Consolas, monospace" font-size="20" fill="#7147d9">código real. pasos claros. sin atajos.</text>
+
+  <rect x="90" y="560" width="150" height="2" fill="#e5e1e9" />
+</svg>

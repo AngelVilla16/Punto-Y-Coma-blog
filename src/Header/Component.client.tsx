@@ -1,41 +1,107 @@
 'use client'
-import { useHeaderTheme } from '@/providers/HeaderTheme'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import React, { useEffect, useState } from 'react'
+import { Search } from 'lucide-react'
+import React from 'react'
 
 import type { Header } from '@/payload-types'
 
 import { Logo } from '@/components/Logo/Logo'
-import { HeaderNav } from './Nav'
+import { HeaderSearch } from './HeaderSearch'
 
 interface HeaderClientProps {
   data: Header
 }
 
+type NavLink = NonNullable<Header['navItems']>[number]['link']
+
+const fallbackNav: { href: string; label: string }[] = [
+  { href: '/', label: 'Inicio' },
+  { href: '/posts', label: 'Tutoriales' },
+  { href: '/#rutas', label: 'Rutas de aprendizaje' },
+]
+
+const getHref = (link?: NavLink | null): string | null => {
+  if (!link) return null
+
+  if (link.type === 'reference' && typeof link.reference?.value === 'object' && link.reference.value) {
+    const { relationTo, value } = link.reference
+    const slug = 'slug' in value ? value.slug : undefined
+
+    if (slug) return relationTo === 'pages' ? `/${slug}` : `/${relationTo}/${slug}`
+  }
+
+  return link.url || null
+}
+
+const isActive = (href: string, pathname: string) => {
+  if (href === '/') return pathname === '/'
+  if (href.startsWith('/#')) return false
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 export const HeaderClient: React.FC<HeaderClientProps> = ({ data }) => {
-  /* Storing the value in a useState to avoid hydration errors */
-  const [theme, setTheme] = useState<string | null>(null)
-  const { headerTheme, setHeaderTheme } = useHeaderTheme()
   const pathname = usePathname()
 
-  useEffect(() => {
-    setHeaderTheme(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname])
+  const navItems = (data?.navItems || [])
+    .map(({ link }) => {
+      const href = getHref(link)
+      if (!href) return null
 
-  useEffect(() => {
-    if (headerTheme && headerTheme !== theme) setTheme(headerTheme)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [headerTheme])
+      return {
+        href,
+        label: link?.label || href,
+        newTab: Boolean(link?.newTab),
+      }
+    })
+    .filter((item): item is { href: string; label: string; newTab: boolean } => Boolean(item))
+
+  const nav = navItems.length > 0 ? navItems : fallbackNav.map((item) => ({ ...item, newTab: false }))
 
   return (
-    <header className="container relative z-20   " {...(theme ? { 'data-theme': theme } : {})}>
-      <div className="py-8 flex justify-between">
-        <Link href="/">
-          <Logo loading="eager" priority="high" className="invert dark:invert-0" />
+    <header className="sticky top-0 z-30 border-b border-line bg-canvas/95 backdrop-blur">
+      <div className="shell flex h-[72px] items-center justify-between gap-6 lg:h-[100px]">
+        <Link aria-label="Punto y coma, inicio" className="shrink-0" href="/">
+          <Logo />
         </Link>
-        <HeaderNav data={data} />
+
+        <nav aria-label="Navegación principal" className="hidden items-center gap-8 lg:flex">
+          {nav.map((item) => {
+            const active = isActive(item.href, pathname)
+
+            return (
+              <Link
+                className={
+                  active
+                    ? 'text-[14px] font-normal text-brand'
+                    : 'text-[14px] font-medium text-subtle transition-colors hover:text-ink'
+                }
+                href={item.href}
+                key={`${item.href}-${item.label}`}
+                {...(item.newTab ? { rel: 'noopener noreferrer', target: '_blank' } : {})}
+              >
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="flex items-center gap-4 lg:gap-6">
+          <HeaderSearch />
+          <Link
+            aria-label="Buscar tutoriales"
+            className="flex size-[42px] items-center justify-center rounded-[8px] border border-line bg-white text-subtle md:hidden"
+            href="/search"
+          >
+            <Search className="size-[18px]" strokeWidth={1.6} />
+          </Link>
+          <Link
+            className="hidden whitespace-nowrap text-[14px] font-semibold text-brand transition-opacity hover:opacity-70 xl:inline"
+            href="/#newsletter"
+          >
+            La newsletter ↗
+          </Link>
+        </div>
       </div>
     </header>
   )

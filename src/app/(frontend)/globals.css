@@ -43,8 +43,27 @@
   --breakpoint-lg: 64rem;
   --breakpoint-xl: 80rem;
   --breakpoint-2xl: 86rem;
-  --font-mono: var(--font-geist-mono);
-  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Punto y coma palette */
+  --color-canvas: #faf9f6;
+  --color-ink: #252330;
+  --color-subtle: #76727f;
+  --color-line: #e5e1e9;
+  --color-line-strong: #d2ccd9;
+  --color-brand: #7147d9;
+  --color-brand-soft: #f5f1fc;
+  --color-brand-tint: #efeafb;
+  --color-code: #292435;
+  --color-code-text: #eae2fa;
+  --color-code-keyword: #c8adfa;
+  --color-code-string: #aed6be;
+  --color-code-muted: #aca0c3;
+  --color-tint-lilac: #e5ddf7;
+  --color-tint-sage: #dcece3;
+  --color-tint-sand: #f6e8d9;
+  --color-positive: #40745d;
 }
 
 @layer utilities {
@@ -52,6 +71,13 @@
     width: 100%;
     margin-inline: auto;
     padding-inline: 1rem;
+  }
+
+  .shell {
+    width: 100%;
+    max-width: 90rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
   }
 
   @variant sm {
@@ -65,11 +91,19 @@
       max-width: var(--breakpoint-md);
       padding-inline: 2rem;
     }
+
+    .shell {
+      padding-inline: 2.5rem;
+    }
   }
 
   @variant lg {
     .container {
       max-width: var(--breakpoint-lg);
+    }
+
+    .shell {
+      padding-inline: 5rem;
     }
   }
 
@@ -210,11 +244,16 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground min-h-[100vh] flex flex-col;
+    @apply bg-canvas text-ink font-sans min-h-[100vh] flex flex-col antialiased;
+  }
+  ::selection {
+    background: var(--color-brand-tint);
+    color: var(--color-brand);
   }
 }
 
 html {
+  scroll-behavior: smooth;
   opacity: 0;
 }
 
