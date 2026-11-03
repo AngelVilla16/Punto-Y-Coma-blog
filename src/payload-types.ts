@@ -245,6 +245,10 @@ export interface Post {
   };
   relatedPosts?: (number | Post)[] | null;
   categories?: (number | Category)[] | null;
+  /**
+   * Nivel de dificultad que se muestra en las tarjetas y filtros.
+   */
+  level?: ('Inicial' | 'Intermedio' | 'Avanzado') | null;
   meta?: {
     title?: string | null;
     /**
@@ -396,6 +400,14 @@ export interface FolderInterface {
 export interface Category {
   id: number;
   title: string;
+  /**
+   * Símbolo corto que se muestra en la tarjeta de la portada (por ejemplo: JS, </>, #).
+   */
+  glyph?: string | null;
+  /**
+   * Controla el orden en el que aparece la categoría en la portada y los filtros.
+   */
+  order?: number | null;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
@@ -1190,6 +1202,7 @@ export interface PostsSelect<T extends boolean = true> {
   content?: T;
   relatedPosts?: T;
   categories?: T;
+  level?: T;
   meta?:
     | T
     | {
@@ -1311,6 +1324,8 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface CategoriesSelect<T extends boolean = true> {
   title?: T;
+  glyph?: T;
+  order?: T;
   generateSlug?: T;
   slug?: T;
   parent?: T;

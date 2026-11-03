@@ -1,11 +1,17 @@
-import type { Post } from '@/payload-types'
+import type { Category, Post } from '@/payload-types'
+
+import { TUTORIAL_LEVELS, type TutorialLevel } from './tutorialLevels'
+
+export { TUTORIAL_LEVELS }
+export type { TutorialLevel }
 
 export type TutorialCardDoc = Pick<
   Post,
-  'slug' | 'categories' | 'meta' | 'title' | 'publishedAt'
+  'slug' | 'categories' | 'meta' | 'title' | 'publishedAt' | 'level'
 >
 
-export type TutorialLevel = 'Inicial' | 'Intermedio' | 'Avanzado'
+export type TutorialCategory = Pick<Category, 'id' | 'title' | 'slug' | 'glyph' | 'order'>
+
 export type TimeBucket = 'under10' | '10to20' | 'over20'
 
 export type CodeTone = 'plain' | 'keyword' | 'string' | 'muted'
@@ -16,49 +22,6 @@ export type CodeSnippet = {
   tint: 'lilac' | 'sage' | 'sand' | 'brand'
   lines: { text: string; tone?: CodeTone }[]
 }
-
-export type TechDefinition = {
-  key: string
-  label: string
-  glyph: string
-  aliases: string[]
-}
-
-export const TECH_CATALOG: TechDefinition[] = [
-  { key: 'JavaScript', label: 'JavaScript', glyph: 'JS', aliases: ['javascript', 'js'] },
-  {
-    key: 'React',
-    label: 'React',
-    glyph: '</>',
-    aliases: ['react', 'reactjs', 'react native', 'react-native', 'mobile'],
-  },
-  { key: 'Python', label: 'Python', glyph: 'py', aliases: ['python'] },
-  {
-    key: 'HTML & CSS',
-    label: 'HTML & CSS',
-    glyph: '#',
-    aliases: ['html', 'css', 'html & css', 'html y css', 'maquetacion'],
-  },
-  {
-    key: 'Node.js',
-    label: 'Node.js',
-    glyph: '{ }',
-    aliases: ['node', 'node.js', 'nodejs', 'express'],
-  },
-  { key: 'TypeScript', label: 'TypeScript', glyph: 'TS', aliases: ['typescript', 'ts'] },
-]
-
-const LEVEL_KEYWORDS: { level: TutorialLevel; pattern: RegExp }[] = [
-  {
-    level: 'Avanzado',
-    pattern: /(avanzad|arquitectura|performance|optimiz|deploy|seguridad|escalab|patron)/i,
-  },
-  {
-    level: 'Intermedio',
-    pattern:
-      /(hook|useeffect|context|grid|api|async|promesa|typescript|estado|fetch|formulario|custom|clase)/i,
-  },
-]
 
 const SNIPPETS: Record<string, CodeSnippet> = {
   react: {
@@ -184,46 +147,46 @@ export const getCategoryTitles = (doc: TutorialCardDoc): string[] =>
 export const getCategoryTitle = (doc: TutorialCardDoc, fallback = 'Tutorial') =>
   getCategoryTitles(doc)[0] || fallback
 
-export const getTechDefinition = (doc: TutorialCardDoc): TechDefinition | null => {
-  const titles = getCategoryTitles(doc).map(normalizeText)
-
-  for (const tech of TECH_CATALOG) {
-    if (tech.aliases.some((alias) => titles.includes(normalizeText(alias)))) return tech
+export const getCategoryDoc = (doc: TutorialCardDoc): Category | null => {
+  for (const category of doc.categories ?? []) {
+    if (typeof category === 'object' && category) return category
   }
 
   return null
 }
 
-export const getTechKey = (doc: TutorialCardDoc) => {
-  const tech = getTechDefinition(doc)
-  if (tech) return tech.key
-  return getCategoryTitle(doc)
+export const getCategorySlug = (doc: TutorialCardDoc): string => {
+  const category = getCategoryDoc(doc)
+  if (category?.slug) return category.slug
+  return normalizeText(getCategoryTitle(doc)).replace(/\s+/g, '-')
+}
+
+export const getCategoryGlyph = (
+  category?: Pick<Category, 'glyph' | 'title'> | null,
+): string => {
+  const glyph = category?.glyph?.trim()
+  if (glyph) return glyph
+
+  const title = category?.title?.trim() || 'Tutorial'
+  return title.slice(0, 2)
 }
 
 export const getSnippet = (doc: TutorialCardDoc): CodeSnippet => {
-  const titles = getCategoryTitles(doc).map(normalizeText)
-  const join = titles.join(' ')
+  const category = getCategoryDoc(doc)
+  const haystack = normalizeText(`${category?.slug || ''} ${getCategoryTitles(doc).join(' ')}`)
 
-  if (join.includes('mobile') || join.includes('react native')) return SNIPPETS.mobile
-  if (join.includes('typescript')) return SNIPPETS.typescript
-  if (join.includes('react')) return SNIPPETS.react
-  if (join.includes('python')) return SNIPPETS.python
-  if (join.includes('css') || join.includes('html')) return SNIPPETS.css
-  if (join.includes('node') || join.includes('express')) return SNIPPETS.node
-  if (join.includes('javascript') || join.includes('js')) return SNIPPETS.javascript
+  if (haystack.includes('mobile') || haystack.includes('react native')) return SNIPPETS.mobile
+  if (haystack.includes('typescript')) return SNIPPETS.typescript
+  if (haystack.includes('react')) return SNIPPETS.react
+  if (haystack.includes('python')) return SNIPPETS.python
+  if (haystack.includes('css') || haystack.includes('html')) return SNIPPETS.css
+  if (haystack.includes('node') || haystack.includes('express')) return SNIPPETS.node
+  if (haystack.includes('javascript') || haystack.includes('js')) return SNIPPETS.javascript
 
   return SNIPPETS.default
 }
 
-export const getTutorialLevel = (doc: TutorialCardDoc): TutorialLevel => {
-  const haystack = `${doc.title} ${getCategoryTitles(doc).join(' ')}`
-
-  for (const { level, pattern } of LEVEL_KEYWORDS) {
-    if (pattern.test(haystack)) return level
-  }
-
-  return 'Inicial'
-}
+export const getTutorialLevel = (doc: TutorialCardDoc): TutorialLevel => doc.level || 'Inicial'
 
 const hashString = (value: string) =>
   Array.from(value).reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) % 997, 7)

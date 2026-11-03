@@ -15,6 +15,7 @@ import { Banner } from '../../blocks/Banner/config'
 import { Code } from '../../blocks/Code/config'
 import { MediaBlock } from '../../blocks/MediaBlock/config'
 import { generatePreviewPath } from '../../utilities/generatePreviewPath'
+import { TUTORIAL_LEVELS } from '../../utilities/tutorialLevels'
 import { populateAuthors } from './hooks/populateAuthors'
 import { revalidateDelete, revalidatePost } from './hooks/revalidatePost'
 
@@ -42,13 +43,14 @@ export const Posts: CollectionConfig<'posts'> = {
     title: true,
     slug: true,
     categories: true,
+    level: true,
     meta: {
       image: true,
       description: true,
     },
   },
   admin: {
-    defaultColumns: ['title', 'slug', 'updatedAt'],
+    defaultColumns: ['title', 'level', 'slug', 'updatedAt'],
     livePreview: {
       url: ({ data, req }) =>
         generatePreviewPath({
@@ -128,6 +130,16 @@ export const Posts: CollectionConfig<'posts'> = {
               },
               hasMany: true,
               relationTo: 'categories',
+            },
+            {
+              name: 'level',
+              type: 'select',
+              admin: {
+                position: 'sidebar',
+                description: 'Nivel de dificultad que se muestra en las tarjetas y filtros.',
+              },
+              defaultValue: 'Inicial',
+              options: TUTORIAL_LEVELS.map((level) => ({ label: level, value: level })),
             },
           ],
           label: 'Meta',
